@@ -36,7 +36,6 @@ $(APPNAME): $(OBJ)
 $(OBJDIR)/%.o: $(SRCDIR)/%$(EXT)
 	$(CC) $(CXXFLAGS) -o $@ -c $<
 
-################### Cleaning rules for Unix-based OS ###################
 # Cleans complete project
 .PHONY: clean
 clean:
