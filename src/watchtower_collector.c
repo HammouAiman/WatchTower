@@ -1,5 +1,5 @@
-#include "wt_collector.h"
-#include "wt_common.h"
+#include "watchtower_collector.h"
+#include "watchtower_common.h"
 
 int collector_init(struct collector *c)
 {
@@ -24,8 +24,15 @@ int collector_collect(struct collector *c, struct metric_value *out)
 	return c->ops->collect(c, out);
 }
 
-void collector_init_base(struct collector *base, struct collector_ops *ops,
-						 bool enabled, void *interval_data,
+void collector_print(struct collector *c, struct metric_value *out)
+{
+	if (c == NULL || c->ops == NULL || c->ops->print == NULL || out == NULL)
+		return;
+
+	c->ops->print(c, out);
+}
+
+void collector_init_base(struct collector *base, struct collector_ops *ops, bool enabled, void *interval_data,
 						 struct collector *next, uint32_t interval)
 {
 	if (base == NULL)

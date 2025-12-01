@@ -1,5 +1,12 @@
 TODO (for now):
-    - Ram Collector (DONE for WIN32 ONLY);
-    - ADD __REPR__ to ops. (sort of print debug function.);
-    - cpu collector.
-    - collector register.
+    - Ram Collector:DONE FOR WIN32
+    - Collector register:
+
+
+main.c con 2 collector manuali
+         ↓
+    factory pattern
+         ↓
+   YAML config loader
+         ↓
+   sistema completo

@@ -1,8 +1,8 @@
 #ifndef _WT_COLLECTOR_RAM_H
 #define _WT_COLLECTOR_RAM_H
 
-#include "wt_collector.h"
-#include "wt_common.h"
+#include "watchtower_collector.h"
+#include "watchtower_common.h"
 #include <windows.h>
 
 struct ram_collector

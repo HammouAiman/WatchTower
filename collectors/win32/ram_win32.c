@@ -1,7 +1,7 @@
 #include "ram_win32.h"
 
-#include "wt_collector.h"
-#include "wt_common.h"
+#include "watchtower_collector.h"
+#include "watchtower_common.h"
 
 static int get_memory_status(struct ram_collector *self)
 {
@@ -16,8 +16,7 @@ static int get_memory_status(struct ram_collector *self)
 	memory_status.dwLength = sizeof(memory_status);
 	if (!GlobalMemoryStatusEx(&memory_status))
 	{
-		LOG_ERROR("GlobalMemoryStatusEx failed with error %lu\n",
-				  (long unsigned int)GetLastError());
+		LOG_ERROR("GlobalMemoryStatusEx failed with error %lu\n", (long unsigned int)GetLastError());
 		return -METRIC_ERR_COLLECT;
 	}
 
@@ -29,8 +28,7 @@ static int get_memory_status(struct ram_collector *self)
 	self->memory_total_page_file	 = memory_status.ullTotalPageFile;
 	self->memory_available_page_file = memory_status.ullAvailPageFile;
 
-	self->memory_available_extended_virtual =
-		memory_status.ullAvailExtendedVirtual;
+	self->memory_available_extended_virtual = memory_status.ullAvailExtendedVirtual;
 
 	return METRIC_OK;
 }
@@ -67,7 +65,7 @@ static int ram_ops_collect(struct collector *cl, struct metric_value *out)
 {
 	int ret = METRIC_OK;
 
-	struct ram_collector *self = NULL;
+	struct ram_collector *ram = NULL;
 
 	if (cl == NULL)
 	{
@@ -80,25 +78,49 @@ static int ram_ops_collect(struct collector *cl, struct metric_value *out)
 		return -METRIC_ERR_INVALID;
 	}
 
-	self = ram_collector_from_base(cl);
+	ram = ram_collector_from_base(cl);
 
-	ret = get_memory_status(self);
+	ret = get_memory_status(ram);
 	if (ret != METRIC_OK)
 	{
 		return ret;
 	}
 
-	out->value				   = self->memory_load;
-	out->unit				   = UNIT_PERCENT;
+	out->value				   = ram->memory_load;
+	out->unit				   = cl->ops->unit;
 	out->acquisition_timestamp = time(NULL);
 
 	return METRIC_OK;
 }
 
+static void ram_ops_print(struct collector *c, const struct metric_value *val)
+{
+	char time_formatted[64];
+	struct ram_collector *rc = ram_collector_from_base(c);
+
+	printf("Collector: %s\n", c->ops->name);
+	printf("[%s] Memory Load: %lu%%\n", c->ops->name, rc->memory_load, val->unit);
+	printf("  ┌─────────────────────┬──────────────┬──────────────┐\n");
+	printf("  │ Memory Type         │ Total        │ Available    │\n");
+	printf("  ├─────────────────────┼──────────────┼──────────────┤\n");
+	printf("  │ Physical Memory     │ %9.2f GB │ %9.2f GB │\n", rc->memory_total_phy / (1024.0 * 1024.0 * 1024.0),
+		   rc->memory_available_phy / (1024.0 * 1024.0 * 1024.0));
+	printf("  │ Page File           │ %9.2f GB │ %9.2f GB │\n", rc->memory_total_page_file / (1024.0 * 1024.0 * 1024.0),
+		   rc->memory_available_page_file / (1024.0 * 1024.0 * 1024.0));
+	printf("  │ Virtual Memory      │ %9.2f GB │ %9.2f GB │\n", rc->memory_total_virtual / (1024.0 * 1024.0 * 1024.0),
+		   rc->memory_available_virtual / (1024.0 * 1024.0 * 1024.0));
+	printf("  └─────────────────────┴──────────────┴──────────────┘\n");
+	printf("  Timestamp: %s\n", format_timestamp(val->acquisition_timestamp, time_formatted, sizeof(time_formatted)));
+}
+
 static const struct collector_ops ram_collector_ops = {
+	.name	  = "system.memory.info",
+	.unit	  = UNIT_PERCENT,
 	.init	  = ram_ops_init,
+	.print	  = ram_ops_print,
 	.collect  = ram_ops_collect,
 	.shutdown = ram_ops_shutdown,
+
 };
 
 //public functions
@@ -110,8 +132,7 @@ int ram_collector_init(struct ram_collector *self, uint32_t interval_ms)
 		return -METRIC_ERR_INVALID;
 	}
 
-	collector_init_base(&self->base, (struct collector_ops *)&ram_collector_ops,
-						true, NULL, NULL, interval_ms);
+	collector_init_base(&self->base, (struct collector_ops *)&ram_collector_ops, true, NULL, NULL, interval_ms);
 
 	self->memory_load				 = 0;
 	self->memory_total_phy			 = 0;

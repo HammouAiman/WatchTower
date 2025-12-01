@@ -1,58 +1,53 @@
-CC = gcc
-CXXFLAGS = -std=c11 -Wall
-LDFLAGS = 
+# Compiler and tools
+CC       = gcc
+DEBUGGER = gdb
 
-APPNAME = wt
-EXT = .c
-SRCDIR = .
-OBJDIR = .
+# Flags
+CFLAGS   = -std=c99 -O0 -pthread -Isrc -Icollectors
+LFLAGS   = -ldl -lm -lpthread
 
-SRC = $(wildcard $(SRCDIR)/*$(EXT))
-OBJ = $(SRC:$(SRCDIR)/%$(EXT)=$(OBJDIR)/%.o)
-DEP = $(OBJ:$(OBJDIR)/%.o=%.d)
+# Directories
+TARGET    = watchtower
+SRC_DIR   = src
+CLT_DIR   = collectors
+BIN_DIR   = bin
+OBJ_DIR   = $(BIN_DIR)/.obj
 
-# UNIX-based OS variables & settings
-RM = rm
-DELOBJ = $(OBJ)
-# Windows OS variables & settings
-DEL = del
-EXE = .exe
-WDELOBJ = $(SRC:$(SRCDIR)/%$(EXT)=$(OBJDIR)\\%.o)
+# Collect all .c files (src + one-level subfolders + collectors subfolders)
+SRC = $(wildcard $(SRC_DIR)/*.c \
+               $(SRC_DIR)/*/*.c \
+               $(CLT_DIR)/*/*.c)
 
-all: $(APPNAME)
+# Convert each .c file into corresponding .o inside .obj/
+OBJ = $(patsubst %.c,$(OBJ_DIR)/%.o,$(SRC))
 
-# Builds the app
-$(APPNAME): $(OBJ)
-	$(CC) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
+# Default target
+build: $(BIN_DIR) $(BIN_DIR)/$(TARGET)
 
-# Creates the dependecy rules
-%.d: $(SRCDIR)/%$(EXT)
-	@$(CPP) $(CFLAGS) $< -MM -MT $(@:%.d=$(OBJDIR)/%.o) >$@
+$(BIN_DIR):
+	mkdir -p $@
 
-# Includes all .h files
--include $(DEP)
+# Universal build rule (keeps directory structure)
+$(OBJ_DIR)/%.o : %.c
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS) -c $< -o $@
 
-# Building rule for .o files and its .c/.cpp in combination with all .h
-$(OBJDIR)/%.o: $(SRCDIR)/%$(EXT)
-	$(CC) $(CXXFLAGS) -o $@ -c $<
+# Link final binary
+$(BIN_DIR)/$(TARGET): $(OBJ)
+	$(CC) $(OBJ) $(LFLAGS) -o $@
 
-# Cleans complete project
-.PHONY: clean
+# --- EXTRA TARGETS ---
+
+run: build
+	./$(BIN_DIR)/$(TARGET)
+
+debug: build
+	$(DEBUGGER) $(BIN_DIR)/$(TARGET)
+
 clean:
-	$(RM) $(DELOBJ) $(DEP) $(APPNAME)
+	rm -f $(OBJ)
 
-# Cleans only all files with the extension .d
-.PHONY: cleandep
-cleandep:
-	$(RM) $(DEP)
+remove: clean
+	rm -f $(BIN_DIR)/$(TARGET)
 
-#################### Cleaning rules for Windows OS #####################
-# Cleans complete project
-.PHONY: cleanw
-cleanw:
-	$(DEL) $(WDELOBJ) $(DEP) $(APPNAME)$(EXE)
-
-# Cleans only all files with the extension .d
-.PHONY: cleandepw
-cleandepw:
-	$(DEL) $(DEP)
+.PHONY: build run debug clean remove
